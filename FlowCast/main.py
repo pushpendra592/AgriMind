@@ -278,9 +278,14 @@ def fetch_and_train(lat: float, lon: float, crop_name: str) -> tuple:
     metrics = ml.train_model(df_processed)
 
     if HAS_RICH:
-        success(f"Model trained  ·  RMSE: [bold green]{metrics['rmse']:.4f}[/bold green] mm/h")
+        r2_val = metrics.get('r2', float('nan'))
+        success(
+            f"Model trained  ·  RMSE: [bold green]{metrics['rmse']:.4f}[/bold green] mm/h"
+            f"  ·  R²: [bold cyan]{r2_val:.4f}[/bold cyan]"
+        )
     else:
-        success(f"Model trained  ·  RMSE: {metrics['rmse']:.4f} mm/h")
+        r2_val = metrics.get('r2', float('nan'))
+        success(f"Model trained  ·  RMSE: {metrics['rmse']:.4f} mm/h  ·  R²: {r2_val:.4f}")
 
     return ml, metrics
 
@@ -442,7 +447,7 @@ def main() -> None:
 
     try:
         # Step 1 — Location
-        lat, lon, location_label = get_location()
+        lat, lon, _ = get_location()
 
         # Step 2 — Crop
         crop_name = select_crop()

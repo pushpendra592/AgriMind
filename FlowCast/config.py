@@ -10,15 +10,11 @@ import datetime
 @dataclass
 class AppConfig:
     """Main application configuration."""
-    APP_NAME: str = "FlowCast"
-    APP_ICON: str = "🌾"
-    DB_FILE: str = "agri_database.db"
     
     NASA_BASE_URL: str = "https://power.larc.nasa.gov/api/temporal/hourly/point"
     WEATHER_API_URL: str = "https://api.open-meteo.com/v1/forecast"
     
-    START_YEAR: int = 2015
-    CACHE_TTL: int = 3600
+    START_YEAR: int = 2001
     API_TIMEOUT: int = 30
     
     NASA_PARAMETERS: str = "T2M,T2MWET,TS,PRECTOTCORR,WS2M,GWETTOP,GWETROOT,EVLAND,RH2M,ALLSKY_SFC_SW_DWN,T2MDEW"

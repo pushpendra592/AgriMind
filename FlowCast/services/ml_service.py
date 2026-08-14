@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 
 from config import config, CROPS, CropConfig
 
@@ -156,21 +156,18 @@ class MLService:
         # Evaluate
         predictions = self.model.predict(X_test)
         rmse = np.sqrt(mean_squared_error(y_test, predictions))
+        r2   = r2_score(y_test, predictions)
         
         metrics = {
             'rmse': rmse,
-            'y_test': y_test.values,
-            'predictions': predictions,
-            'train_size': len(X_train),
-            'test_size': len(X_test),
-            'features': self.features,
+            'r2':   r2,
             'feature_importance': dict(zip(
-                self.features, 
+                self.features,
                 self.model.feature_importances_
             ))
         }
         
-        print(f"Model trained with RMSE: {rmse:.4f}")
+        print(f"Model trained with RMSE: {rmse:.4f}  |  R²: {r2:.4f}")
         
         return metrics
     
