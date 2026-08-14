@@ -1,0 +1,70 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ── Virtual environments ─────────────────────────────────
+venv/
+.venv/
+env/
+agrimind/
+*.egg-info/
+dist/
+build/
+
+# ── Jupyter / IPython ────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── ML artefacts ─────────────────────────────────────────
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+models/
+
+# ── Data files ───────────────────────────────────────────
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.db
+*.sqlite
+*.sqlite3
+data/
+raw_data/
+cache/
+
+# ── Logs & temp ──────────────────────────────────────────
+*.log
+*.tmp
+*.temp
+logs/
+
+# ── Environment / secrets ────────────────────────────────
+.env
+.env.*
+*.env
+secrets.py
+config_local.py
+
+# ── OS junk ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ── Coverage / testing ───────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
