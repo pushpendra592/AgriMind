@@ -68,3 +68,7 @@ desktop.ini
 .coverage
 htmlcov/
 .pytest_cache/
+
+# ── Personal notes (local only) ─────────────────────────────
+learning.md
+DESCRIPTION.md

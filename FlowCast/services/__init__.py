@@ -3,6 +3,7 @@
 from .weather_service import WeatherService, fetch_nasa_data, get_live_weather
 from .geo_service import GeoService, get_lat_lon
 from .ml_service import MLService, preprocess_data, calculate_current_kc
+from .data_cleaning import clean_physical_outliers
 
 __all__ = [
     'WeatherService',
@@ -12,5 +13,6 @@ __all__ = [
     'get_lat_lon',
     'MLService',
     'preprocess_data',
-    'calculate_current_kc'
+    'calculate_current_kc',
+    'clean_physical_outliers'
 ]

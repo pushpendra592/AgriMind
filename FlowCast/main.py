@@ -263,7 +263,7 @@ def fetch_and_train(lat: float, lon: float, crop_name: str) -> tuple:
 
     info("Preprocessing data …")
     ml = MLService()
-    df_processed = ml.preprocess_data(df_raw, crop_name)
+    df_processed = ml.preprocess_data(df_raw, crop_name, lat=lat)
 
     if df_processed.empty:
         error(
@@ -272,20 +272,23 @@ def fetch_and_train(lat: float, lon: float, crop_name: str) -> tuple:
         )
         sys.exit(1)
 
-    success(f"Preprocessed {len(df_processed):,} training samples.")
-
     info("Training XGBoost model …")
     metrics = ml.train_model(df_processed)
 
+    r2_val  = metrics.get('r2',   float('nan'))
+    mae_val = metrics.get('mae',  float('nan'))
     if HAS_RICH:
-        r2_val = metrics.get('r2', float('nan'))
         success(
             f"Model trained  ·  RMSE: [bold green]{metrics['rmse']:.4f}[/bold green] mm/h"
+            f"  ·  MAE: [green]{mae_val:.4f}[/green] mm/h"
             f"  ·  R²: [bold cyan]{r2_val:.4f}[/bold cyan]"
         )
     else:
-        r2_val = metrics.get('r2', float('nan'))
-        success(f"Model trained  ·  RMSE: {metrics['rmse']:.4f} mm/h  ·  R²: {r2_val:.4f}")
+        success(
+            f"Model trained  ·  RMSE: {metrics['rmse']:.4f} mm/h"
+            f"  ·  MAE: {mae_val:.4f} mm/h"
+            f"  ·  R²: {r2_val:.4f}"
+        )
 
     return ml, metrics
 
@@ -305,7 +308,7 @@ def predict_now(ml: MLService, lat: float, lon: float, crop_name: str) -> None:
         error("Could not fetch live weather. Prediction skipped.")
         return
 
-    kc, stage, days_grown, total_duration = calculate_current_kc(crop_name)
+    kc, stage, days_grown, total_duration = calculate_current_kc(crop_name, lat=lat)
 
     # ── Build feature row ────────────────────────────────────────────────────
     t2m      = weather["t2m"]

@@ -10,6 +10,12 @@ import requests
 import pandas as pd
 
 from config import config
+from services.data_cleaning import clean_physical_outliers
+
+# Physical plausibility bounds — same values used by clean_physical_outliers.
+# Printed in the validation summary so the operator knows what was screened.
+_EVLAND_WARN_THRESHOLD    = 1.5   # mm/hr: values above this are suspicious but kept
+_PRECTOTCORR_MAX_PHYSICAL = 150.0  # mm/hr: hard cap (already enforced by cleaner)
 
 
 class WeatherService:
@@ -101,6 +107,12 @@ class WeatherService:
         if not df.empty:
             df.replace(-999, float('nan'), inplace=True)
             df.dropna(inplace=True)
+            # Physical-bounds cleaning: drop rows with implausible EVLAND /
+            # PRECTOTCORR values before any caller can use raw data.
+            df = clean_physical_outliers(df, verbose=True)
+            # Integrity check: warn if duplicate timestamps or suspicious
+            # field ranges are detected (runs after cleaning, on what survives).
+            self._validate_raw_data(df)
             # Sort by date
             df = df.sort_values(['YEAR', 'MO', 'DY', 'HR']).reset_index(drop=True)
             
@@ -135,6 +147,70 @@ class WeatherService:
         
         return records
     
+    def _validate_raw_data(self, df: pd.DataFrame) -> None:
+        """
+        Run basic integrity checks on the fetched NASA POWER data and print a
+        concise warning summary. Checks two independent concerns:
+
+        1. Duplicate timestamps (YEAR/MO/DY/HR) — caused by a parsing or
+           concat bug in the fetch layer, not a units problem.
+        2. Suspicious EVLAND / PRECTOTCORR ranges — EVLAND physically tops out
+           at ~1–1.5 mm/hr; values above that after cleaning indicate a unit
+           conversion issue in the ingestion layer, not the ML model.
+
+        Does NOT raise; prints warnings so the pipeline can continue while the
+        operator investigates.
+        """
+        sep = "─" * 60
+
+        # ── 1. Duplicate timestamp check ────────────────────────────────────
+        key_cols = ["YEAR", "MO", "DY", "HR"]
+        if all(c in df.columns for c in key_cols):
+            dupes = df.duplicated(subset=key_cols, keep=False)
+            if dupes.sum() > 0:
+                print(f"\n  [WARN] {sep}")
+                print(f"  [WARN] DUPLICATE TIMESTAMPS: {dupes.sum()} rows share a (YEAR,MO,DY,HR) key.")
+                print(f"  [WARN] This points to a concat/merge bug in the fetch layer, not a units issue.")
+                print(f"  [WARN] Top offenders (first 5 duplicate groups):")
+                sample = (
+                    df[dupes]
+                    .sort_values(key_cols)
+                    .head(10)
+                    [key_cols + [c for c in ["EVLAND", "PRECTOTCORR"] if c in df.columns]]
+                )
+                for line in sample.to_string(index=False).splitlines():
+                    print(f"  [WARN]   {line}")
+                print(f"  [WARN] {sep}")
+
+        # ── 2. Field-range sanity check (post-cleaning) ──────────────────────
+        warnings_issued = False
+        for col, warn_threshold, label in [
+            ("EVLAND",      _EVLAND_WARN_THRESHOLD,    "mm/hr (physical max ~1–1.5)"),
+            ("PRECTOTCORR", _PRECTOTCORR_MAX_PHYSICAL, "mm/hr (hard cap)"),
+        ]:
+            if col not in df.columns:
+                continue
+            s = df[col]
+            p999 = s.quantile(0.999)
+            vmax = s.max()
+            if p999 > warn_threshold:
+                if not warnings_issued:
+                    print(f"\n  [WARN] {sep}")
+                    print(f"  [WARN] RAW DATA RANGE WARNING (after cleaning):")
+                    warnings_issued = True
+                pct_above = 100 * (s > warn_threshold).sum() / len(s)
+                print(
+                    f"  [WARN]   {col}: max={vmax:.4f}, p99.9={p999:.4f} {label}  "
+                    f"| {pct_above:.3f}% of rows above threshold."
+                )
+                if col == "EVLAND" and p999 > warn_threshold:
+                    print(
+                        "  [WARN]   EVLAND above threshold after cleaning — check unit"
+                        " conversion in _parse_nasa_response (should be mm/hr, not kg/m²/s)."
+                    )
+        if warnings_issued:
+            print(f"  [WARN] {sep}")
+
     def get_live_weather(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
         """Fetch current weather and forecast."""
         params = {
